@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"time"
 )
 
@@ -21,6 +22,28 @@ Se la numero fariĝas malpli alta ol %d, ĝi reiras al %d.
 Multan sukceson!
 
 `, min, max-1, skip, max-1, min, min, max-1)
+}
+
+func askPlayers() (n int) {
+	fmt.Print("Kiom da ludantoj estas? [2] ")
+	fmt.Scan(&n)
+	if n < 1 {
+		return 2
+	}
+	return n
+}
+
+func askNames(n int) (names []string) {
+	for i := 1; i <= n; i++ {
+		name := ""
+		fmt.Printf("Ludanto %d, kiel mi nomu vin? [Ludanto %d] ", n, n)
+		fmt.Scan(&name)
+		if name == "" {
+			name = fmt.Sprintf("Ludanto %d", n)
+		}
+		names = append(names, name)
+	}
+	return names
 }
 
 func getNumber(min, max, skip int, guessed chan bool) (nchan chan int) {
@@ -66,14 +89,25 @@ func play(name string, number int) (won bool) {
 func main() {
 	rand.Seed(int64(time.Now().Nanosecond()))
 	min, max, skip := 0, 100, 1
-	players := 2
+	switch len(os.Args) {
+	case 0:
+		panic("This shouldn't happen: os.Args is an empty slice.")
+	case 1:
+	case 2:
+		fmt.Sscan(os.Args[1], &max)
+	case 3:
+		fmt.Sscan(os.Args[1]+" "+os.Args[2], &min, &max)
+	default:
+		fmt.Sscan(os.Args[1]+" "+os.Args[2]+" "+os.Args[3], &min, &max, &skip)
+	}
 	klariguLudon(min, max, skip)
+	players := askPlayers()
+	names := askNames(players)
 	guessed := make(chan bool)
 	numbers := getNumber(min, max, skip, guessed)
-	for number := range numbers {
-		for i := 1; i <= players; i++ {
-			name := fmt.Sprintf("Ludanto %d", i)
-			if play(name, number) {
+	for {
+		for _, name := range names {
+			if play(name, <-numbers) {
 				fmt.Printf("Gratulon %s, vi gajnis!\n", name)
 				return
 			}
