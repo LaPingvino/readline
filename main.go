@@ -25,7 +25,7 @@ Multan sukceson!
 }
 
 func askPlayers() (n int) {
-	fmt.Print("Kiom da ludantoj estas? [2] ")
+	fmt.Print("Kiom da ludantoj estas? ")
 	fmt.Scan(&n)
 	if n < 1 {
 		return 2
@@ -36,11 +36,8 @@ func askPlayers() (n int) {
 func askNames(n int) (names []string) {
 	for i := 1; i <= n; i++ {
 		name := ""
-		fmt.Printf("Ludanto %d, kiel mi nomu vin? [Ludanto %d] ", n, n)
+		fmt.Printf("Ludanto %d, kiel mi nomu vin? ", i)
 		fmt.Scan(&name)
-		if name == "" {
-			name = fmt.Sprintf("Ludanto %d", n)
-		}
 		names = append(names, name)
 	}
 	return names
