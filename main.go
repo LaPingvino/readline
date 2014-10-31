@@ -7,21 +7,29 @@ import (
 	"time"
 )
 
-const (
-	MAXINT = ^int(0)
-)
-
 func klariguLudon(min, max, skip int) {
 	fmt.Printf(`Bonvenon ĉe "Kaptu la muson"
 
 La celo de la ludo estas diveni numeron de %d ĝis %d.
 Vi povas provi tion unu post la alia.
-Tamen atentu! La numero povas ĉu ĉiam resti la sama, ĉu supreniri per %d ĉiufoje, ĉu malsupreniri ĉiufoje per la samo.
+%s
 Se la numero fariĝas pli alta ol %d, ĝi reiras al %d.
 Se la numero fariĝas malpli alta ol %d, ĝi reiras al %d.
 Multan sukceson!
 
-`, min, max-1, skip, max-1, min, min, max-1)
+`, min, max, skipDoes(skip), max, min, min, max)
+}
+
+func skipDoes(skip int) string {
+	switch {
+	case skip > 0:
+		return fmt.Sprintf("Tamen atentu! La numero povas post ĉies vico ĉu %d supreniri, ĉu tiom malsupreniri, ĉu resti sama.", skip)
+	case skip == 0:
+		return fmt.Sprint("Vi elektis ke la numero ĉiam restu la sama.")
+	case skip < 0:
+		return fmt.Sprintf("Vi elektis veran defion. La numero povas post ĉies vico en hazarda kvanto de maksimume %d supreniri, ĉu samkvante malsupreniri, ĉu resti la sama.", -skip)
+	}
+	panic("This should never happen.")
 }
 
 func askPlayers() (n int) {
@@ -46,20 +54,25 @@ func askNames(n int) (names []string) {
 func getNumber(min, max, skip int, guessed chan bool) (nchan chan int) {
 	nchan = make(chan int, 0)
 	go func() {
-		i := rand.Intn(max-min) + min
+		i := rand.Intn(max-(min-1)) + (min - 1)
 		s := rand.Intn(3) - 1
+		skipn := skip
+		if skip < 0 {
+			skipn = rand.Intn(-skip)
+		}
 		for {
 			select {
 			case nchan <- i:
 			case <-guessed:
-				close(nchan)
+				guessed <- true
+				return
 			}
-			i += s * skip
+			i += s * skipn
 			switch {
-			case i >= max:
+			case i > max:
 				i = min
 			case i < min:
-				i = max - 1
+				i = max
 			}
 		}
 	}()
@@ -83,13 +96,28 @@ func play(name string, number int) (won bool) {
 	return false
 }
 
+func again() bool {
+	for {
+		fmt.Print("Ĉu ludi denove, jes aŭ ne? ")
+		answer := ""
+		fmt.Scan(&answer)
+		switch answer {
+		case "jes":
+			return true
+		case "ne":
+			return false
+		}
+	}
+}
+
 func main() {
 	rand.Seed(int64(time.Now().Nanosecond()))
-	min, max, skip := 0, 100, 1
+	min, max, skip := 1, 100, 1
 	switch len(os.Args) {
 	case 0:
 		panic("This shouldn't happen: os.Args is an empty slice.")
 	case 1:
+		fmt.Print("(Vi ludas kun la defaŭltaj valoroj. Se vi volas pli grandan defion, provu ŝanĝi la parametrojn! Nur unu parametro indikas la plej altan numeron, se vi indikas pli tio estas sinsekve minimumo, maksimumo, saltogrando. Negativa saltogrando hazardigas la saltograndon je ĝia absoluta valoro. Bonan muskaptadon!)\n\n")
 	case 2:
 		fmt.Sscan(os.Args[1], &max)
 	case 3:
@@ -104,9 +132,20 @@ func main() {
 	numbers := getNumber(min, max, skip, guessed)
 	for {
 		for _, name := range names {
-			if play(name, <-numbers) {
-				fmt.Printf("Gratulon %s, vi gajnis!\n", name)
-				return
+			select {
+			case number := <-numbers:
+				won := play(name, number)
+				if won {
+					fmt.Printf("Gratulon %s, vi gajnis!\n", name)
+					if again() {
+						guessed <- true
+					} else {
+						fmt.Println("Ĝis revido!")
+						return
+					}
+				}
+			case <-guessed:
+				numbers = getNumber(min, max, skip, guessed)
 			}
 		}
 	}
