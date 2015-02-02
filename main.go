@@ -1,11 +1,35 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"math/rand"
 	"os"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 )
+
+func readline(out interface{}) {
+	in := bufio.NewReader(os.Stdin)
+	switch typedout := out.(type) {
+	case *string:
+		// Error usually EOF, which shouldn't even happen with Stdin
+		// default return value should be the right thing nevertheless.
+		input, _ := in.ReadString('\n')
+		*typedout = strings.TrimRight(input, "\n")
+	case *int:
+		// when ParseInt returns an error, the default value it returns
+		// is still acceptable for a game situation, so ignore it
+		input, _ := in.ReadString('\n')
+		intval, _ := strconv.ParseInt(regexp.MustCompile(`[^0-9]`).ReplaceAllString(input, ""), 10, 0)
+
+		*typedout = int(intval) // conversion from int64 to int, should work because of the last 0 argument in ParseInt
+	default:
+		panic("readline invoked with non-pointer type or pointer to unsupported type.")
+	}
+}
 
 func klariguLudon(min, max, skip int) {
 	fmt.Printf(`Bonvenon ĉe "Kaptu la muson"
@@ -34,7 +58,7 @@ func skipDoes(skip int) string {
 
 func askPlayers() (n int) {
 	fmt.Print("Kiom da ludantoj estas? ")
-	fmt.Scan(&n)
+	readline(&n)
 	if n < 1 {
 		return 2
 	}
@@ -45,7 +69,7 @@ func askNames(n int) (names []string) {
 	for i := 1; i <= n; i++ {
 		name := ""
 		fmt.Printf("Ludanto %d, kiel mi nomu vin? ", i)
-		fmt.Scan(&name)
+		readline(&name)
 		names = append(names, name)
 	}
 	return names
@@ -82,7 +106,7 @@ func getNumber(min, max, skip int, guessed chan bool) (nchan chan int) {
 func play(name string, number int) (won bool) {
 	fmt.Printf("Estas la vico de %s: kiu numero estas? ", name)
 	var guess int
-	fmt.Scan(&guess)
+	readline(&guess)
 	switch {
 	case number == guess:
 		fmt.Println("Prave, la numero estas", number)
@@ -100,7 +124,7 @@ func again() bool {
 	for {
 		fmt.Print("Ĉu ludi denove, jes aŭ ne? ")
 		answer := ""
-		fmt.Scan(&answer)
+		readline(&answer)
 		switch answer {
 		case "jes":
 			return true
